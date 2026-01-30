@@ -19,8 +19,7 @@ jobs:
         python3-setuptools rsync unzip zlib1g-dev file wget
 
     - name: Fix permissions
-      run: |
-        chmod -R +x scripts
+      run: chmod -R +x .
   
     - name: Update & install feeds
       run: |
