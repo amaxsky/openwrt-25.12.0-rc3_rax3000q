@@ -1,0 +1,402 @@
+// SPDX-License-Identifier: GPL-2.0-or-later OR MIT
+
+/dts-v1/;
+
+#include "ipq5018.dtsi"
+#include "ipq5018-ess.dtsi"
+#include "ipq5018-qcn6122.dtsi"
+
+#include <dt-bindings/gpio/gpio.h>
+#include <dt-bindings/input/input.h>
+#include <dt-bindings/leds/common.h>
+
+/ {
+	model = "CMCC RAX3000Q";
+	compatible = "cmcc,rax3000q", "qcom,ipq5018";
+
+	aliases {
+		serial0 = &blsp1_uart1;
+
+		led-boot = &led_status;
+		led-failsafe = &led_status;
+		led-running = &led_status;
+		led-upgrade = &led_wan;
+
+		label-mac-device = <&dp1>;
+	};
+
+	chosen {
+		bootargs-append = " root=/dev/ubiblock0_1 swiotlb=1 coherent_pool=2M";
+		stdout-path = "serial0:115200n8";
+	};
+
+	reserved-memory {
+		tz_apps@4a400000 {
+			no-map;
+			reg = <0x0 0x4a400000 0x0 0x700000>;
+		};
+
+		q6_mem_regions: q6_mem_regions@4b000000 {
+			no-map;
+			reg = <0x0 0x4b000000 0x0 0x3000000>;
+		};
+	};
+
+	keys {
+		compatible = "gpio-keys";
+		pinctrl-0 = <&button_pins>;
+		pinctrl-names = "default";
+
+		reset-button {
+			label = "reset";
+			gpios = <&tlmm 23 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_RESTART>;
+		};
+
+		mesh-button {
+			label = "mesh";
+			gpios = <&tlmm 38 GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_WPS_BUTTON>;
+		};
+	};
+
+	leds {
+		compatible = "gpio-leds";
+		pinctrl-0 = <&led_pins>;
+		pinctrl-names = "default";
+
+		led_status: led-status {
+			gpios = <&tlmm 19 GPIO_ACTIVE_HIGH>;
+			color = <LED_COLOR_ID_GREEN>;
+			function = LED_FUNCTION_STATUS;
+			default-state = "on";
+		};
+
+		led_sys: led-sys {
+			gpios = <&tlmm 24 GPIO_ACTIVE_HIGH>;
+			color = <LED_COLOR_ID_RED>;
+			function = LED_FUNCTION_STATUS;
+		};
+
+		led_wan: led-wan {
+			gpios = <&tlmm 17 GPIO_ACTIVE_HIGH>;
+			color = <LED_COLOR_ID_BLUE>;
+			function = LED_FUNCTION_INTERNET;
+		};
+	};
+};
+
+&sleep_clk {
+	clock-frequency = <32000>;
+};
+
+&xo_board_clk {
+	clock-div = <4>;
+	clock-mult = <1>;
+};
+
+&blsp1_uart1 {
+	status = "okay";
+
+	pinctrl-0 = <&serial_0_pins>;
+	pinctrl-names = "default";
+};
+
+&crypto {
+	status = "okay";
+};
+
+&cryptobam {
+	status = "okay";
+};
+
+&prng {
+	status = "okay";
+};
+
+&qfprom {
+	status = "okay";
+};
+
+&qpic_bam {
+	status = "okay";
+};
+
+&qpic_nand {
+	pinctrl-0 = <&qpic_pins>;
+	pinctrl-names = "default";
+	status = "okay";
+
+	nand@0 {
+		compatible = "spi-nand";
+		reg = <0>;
+		nand-ecc-engine = <&qpic_nand>;
+		nand-bus-width = <8>;
+
+		partitions {
+			compatible = "qcom,smem-part";
+
+			partition-art {
+				label = "0:ART";
+				read-only;
+
+				nvmem-layout {
+					compatible = "fixed-layout";
+					#address-cells = <1>;
+					#size-cells = <1>;
+
+					hw_mac_addr: mac-address@0 {
+						compatible = "mac-base";
+						reg = <0x0 0x6>;
+						#nvmem-cell-cells = <1>;
+					};
+
+					caldata0: caldata@1000 {
+						reg = <0x1000 0x20000>;
+					};
+
+					caldata1: caldata@26800 {
+						reg = <0x26800 0x20000>;
+					};
+				};
+			};
+		};
+	};
+};
+
+&switch {
+	status = "okay";
+
+	switch_mac_mode = <MAC_MODE_SGMII_CHANNEL0>;
+
+	qcom,port_phyinfo {
+		/* MAC0 -> GE PHY --- MDI --- QCA8337 PHY2 */
+		port@0 {
+			port_id = <1>;
+			mdiobus = <&mdio0>;
+			phy_address = <7>;
+		};
+
+		/* MAC1 -> Uniphy --- SGMII --- QCA8337 SerDes (Port6) */
+		port@1 {
+			port_id = <2>;
+			mdiobus = <&mdio1>;
+			forced-speed = <1000>;
+			forced-duplex = <1>;
+		};
+	};
+};
+
+/* MAC0 -> GE PHY */
+&dp1 {
+	status = "okay";
+
+	nvmem-cells = <&hw_mac_addr 0>;
+	nvmem-cell-names = "mac-address";
+
+	local-mac-address = [00 00 00 00 00 00];
+};
+
+/* MAC1 -> SGMII -> QCA8337 */
+&dp2 {
+	status = "okay";
+
+	nvmem-cells = <&hw_mac_addr 1>;
+	nvmem-cell-names = "mac-address";
+
+	local-mac-address = [00 00 00 00 00 00];
+
+	fixed-link {
+		speed = <1000>;
+		full-duplex;
+	};
+};
+
+&mdio0 {
+	status = "okay";
+};
+
+/* IPQ5018 internal GE PHY towards QCA8337 */
+&ge_phy {
+	qcom,dac-preset-short-cable;
+};
+
+&mdio1 {
+	status = "okay";
+
+	pinctrl-0 = <&mdio1_pins>;
+	pinctrl-names = "default";
+	reset-gpios = <&tlmm 26 GPIO_ACTIVE_LOW>;
+
+	/* QCA8337 PHY0 -> WAN */
+	qca8337_0: ethernet-phy@0 {
+		reg = <0>;
+	};
+
+	/* QCA8337 PHY1 -> LAN1 */
+	qca8337_1: ethernet-phy@1 {
+		reg = <1>;
+	};
+
+	/* QCA8337 PHY2 -> IPQ5018 GE PHY */
+	qca8337_2: ethernet-phy@2 {
+		reg = <2>;
+	};
+
+	/* QCA8337 PHY3 -> LAN2 */
+	qca8337_3: ethernet-phy@3 {
+		reg = <3>;
+	};
+
+	/* QCA8337 PHY4 -> LAN3 */
+	qca8337_4: ethernet-phy@4 {
+		reg = <4>;
+	};
+
+	switch1: ethernet-switch@17 {
+		compatible = "qca,qca8337";
+		reg = <17>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		ports {
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			port@1 {
+				reg = <1>;
+				label = "wan";
+				phy-handle = <&qca8337_0>;
+			};
+
+			port@2 {
+				reg = <2>;
+				label = "lan1";
+				phy-handle = <&qca8337_1>;
+			};
+
+			port@3 {
+				reg = <3>;
+				label = "lan2";
+				phy-handle = <&qca8337_3>;
+			};
+
+			port@4 {
+				reg = <4>;
+				label = "lan3";
+				phy-handle = <&qca8337_4>;
+			};
+
+			port@6 {
+				reg = <6>;
+				phy-mode = "sgmii";
+				ethernet = <&dp2>;
+				qca,sgmii-enable-pll;
+
+				fixed-link {
+					speed = <1000>;
+					full-duplex;
+				};
+			};
+		};
+	};
+};
+
+&tlmm {
+	button_pins: button-state {
+		button-pins {
+			pins = "gpio23", "gpio38";
+			function = "gpio";
+			drive-strength = <8>;
+			bias-pull-up;
+		};
+	};
+
+	led_pins: led-state {
+		pins = "gpio24", "gpio19", "gpio17";
+		function = "gpio";
+		drive-strength = <8>;
+		bias-pull-down;
+	};
+
+	mdio1_pins: mdio-state {
+		mdc-pins {
+			pins = "gpio36";
+			function = "mdc";
+			drive-strength = <8>;
+			bias-pull-up;
+		};
+
+		mdio-pins {
+			pins = "gpio37";
+			function = "mdio";
+			drive-strength = <8>;
+			bias-pull-up;
+		};
+	};
+
+	qpic_pins: qpic-state {
+		clock-pins {
+			pins = "gpio9";
+			function = "qspi_clk";
+			drive-strength = <8>;
+			bias-disable;
+		};
+
+		cs-pins {
+			pins = "gpio8";
+			function = "qspi_cs";
+			drive-strength = <8>;
+			bias-disable;
+		};
+
+		data-pins {
+			pins = "gpio4", "gpio5", "gpio6", "gpio7";
+			function = "qspi_data";
+			drive-strength = <8>;
+			bias-disable;
+		};
+	};
+
+	serial_0_pins: uart0-state {
+		pins = "gpio28", "gpio29";
+		function = "blsp0_uart1";
+		drive-strength = <8>;
+		bias-disable;
+	};
+
+	switch_reset_pins: switch-reset-state {
+		pins = "gpio26";
+		function = "gpio";
+		drive-strength = <8>;
+		bias-pull-down;
+	};
+};
+
+/* WiFi: upstream ath11k + nvmem caldata */
+
+&wifi {
+	qcom,board_id = <0x24>;
+	qcom,ath11k-calibration-variant = "CMCC-RAX3000Q";
+	qcom,ath11k-fw-memory-mode = <1>;
+
+	nvmem-cells = <&caldata0>;
+	nvmem-cell-names = "calibration";
+
+	ieee80211-freq-limit = <2400000 2483500>;
+
+	status = "okay";
+};
+
+&wifi1 {
+	qcom,board_id = <0x60>;
+	qcom,ath11k-calibration-variant = "CMCC-RAX3000Q";
+	qcom,ath11k-fw-memory-mode = <1>;
+
+	nvmem-cells = <&caldata1>;
+	nvmem-cell-names = "calibration";
+
+	ieee80211-freq-limit = <5170000 5835000>;
+
+	status = "okay";
+};
