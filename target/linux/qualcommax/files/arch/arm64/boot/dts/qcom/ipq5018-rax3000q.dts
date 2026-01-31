@@ -17,10 +17,10 @@
 	aliases {
 		serial0 = &blsp1_uart1;
 
-		led-boot = &led_status;
-		led-failsafe = &led_status;
-		led-running = &led_status;
-		led-upgrade = &led_wan;
+		led-boot = &led_status_green;
+		led-failsafe = &led_status_red;
+		led-running = &led_status_green;
+		led-upgrade = &led_status_blue;
 
 		label-mac-device = <&dp1>;
 	};
@@ -65,23 +65,23 @@
 		pinctrl-0 = <&led_pins>;
 		pinctrl-names = "default";
 
-		led_status: led-status {
+		led_status_green: led_status_green {
 			gpios = <&tlmm 19 GPIO_ACTIVE_HIGH>;
 			color = <LED_COLOR_ID_GREEN>;
 			function = LED_FUNCTION_STATUS;
 			default-state = "on";
 		};
 
-		led_sys: led-sys {
+		led_status_red: led_status_red {
 			gpios = <&tlmm 24 GPIO_ACTIVE_HIGH>;
 			color = <LED_COLOR_ID_RED>;
 			function = LED_FUNCTION_STATUS;
 		};
 
-		led_wan: led-wan {
+		led_status_blue: led_status_blue {
 			gpios = <&tlmm 17 GPIO_ACTIVE_HIGH>;
 			color = <LED_COLOR_ID_BLUE>;
-			function = LED_FUNCTION_INTERNET;
+			function = "internet"; // LED_FUNCTION_INTERNET
 		};
 	};
 };
