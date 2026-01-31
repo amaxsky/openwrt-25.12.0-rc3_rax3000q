@@ -16,9 +16,10 @@ iodata,wn-dax3000gr)
 	;;
 	
 cmcc,rax3000q)
-	ucidef_set_led_default "status" "Status LED" "led-status" "1"
-	ucidef_set_led_netdev "wan" "WAN LED" "led-wan" "wan"
-	;;
+    ucidef_set_led_default "status_green" "Status Green" "led_status_green" "1"
+    ucidef_set_led_default "status_red" "Status Red" "led_status_red" "0"
+    ucidef_set_led_default "status_blue" "Status Blue" "led_status_blue" "0"
+    ;;
 	
 linksys,mr5500)
 	ucidef_set_led_netdev "lan1-port-link" "LAN1-PORT-LINK" "qca8k-0.0:00:green:lan" "lan1" "link_10 link_100 link_1000"
